@@ -1,83 +1,56 @@
-# NSE-Bhavcopy
+const BhavCopy = require("./index");
+var mysql = require('mysql');
 
-[![NPM](https://nodei.co/npm/nse-bhavcopy.png??downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/nse-bhavcopy/)
+var connection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'technicalkeeda',
+  debug: false,
+});
 
-Node-Js module for downloading NSE bhavcopy from NSE server.
+connection.connect();
 
-To use, follow the below instructions:
+console.log("Connected to Mysql");
 
-```
-const BhavCopy = require('nse-bhavcopy');
 const options = {
- type: 'json' // optional. if not specified, zip file will be downloaded. Valid TYPES: ['json', 'csv', 'zip']
- dir: "xxxx" // optional. if not specified, files will be downloaded under NSE folder
+  type: 'json'  // optional. if not specified, zip file will be downloaded valid TYPES: ['json', 'csv', 'zip']
+  //dir: "./" // optional. if not specified, files will be downloaded under NSE folder
 };
 const request = new BhavCopy(options);
 
 request
- .download({
-   month: "MAY", // required (values can be anything as given below under MONTH CODES)
-   year: 2016, // required (values can be anything as given below under YEAR CODES)
-   day: 10 // optional (values can be anything in range: 1 - 31)
- })
- .then(data => {
-   console.log(data); // Wait! Files are downloading...
- })
- .catch(err => {
-   console.log(err);
- });
-```
+  .download({
+    month: "FEB", // required (values acn be anything given below under Month CODES)
+    year: 2019, // required (values acn be anything given below under YEAR CODES)
+    day: 15 // optional (values can be anything in range: 1 - 31)
+  })
+  .then(data => {
+    console.log(data); // Wait! Files are downloading...
+    let arrData = data[0].map(item => {
+      const date = item.TIMESTAMP;
+      const monthes = { "JAN": "01", "FEB": "02", "MAR": "03", "APR": "04", "MAY": "05", "JUN": "06", "JUL": "07", "AUG": "08", "SEP": "09", "OCT": "10", "NOV": "11", "DEC": "12" }
 
-## Vaild Values@
+      const date_ar = date.split("-")
+      const day = date_ar[0]
+      const year = date_ar[2]
+      const month = monthes[date_ar[1]]
+      const new_date = [year, month, day].join("-")
+      return [item.SYMBOL, item.SERIES, item.OPEN, item.HIGH, item.LOW, item.CLOSE, item.LAST, item.PREVCLOSE, item.TOTTRDQTY, item.TOTTRDVAL, new_date, item.TOTALTRADES, item.ISIN]
+    }
+    )
 
-```
-TYPES:
- 'json',
- 'csv',
- 'zip'
+    connection.query(
+      'INSERT INTO `nse_bhavcopy` (`symbol`, `series`, `open`, `high`, `low`, `close`, `last`, `prevclose`, `tottrdqty`, `tottrdval`, `timestamp`, `totaltrades`,`isin`) VALUES ?',
+      [arrData],
+      (error, results) => {
+        console.log("Insert sucessfully")
+      }
+    );
 
-MONTH CODES:
-"JAN",
-"FEB",
-"MAR",
-"APR",
-"MAY",
-"JUN",
-"JUL",
-"AUG",
-"SEP",
-"OCT",
-"NOV",
-"DEC"
+    connection.end();
 
-YEAR CODES:
-2018,
-2017,
-2016
-```
-
-## Features!
-
-- Download bhavcopy for a specified day
-- Or Download bhavcopy for entire month of a specified year
-
-## What's new in v1.0.0
-
-v1.0.0 now supports csv & json format as well.
-
-## Requirement
-
-nse-bhavcopy requires [Node.js](https://nodejs.org/) v8+ to run.
-
-## Github
-
-[Github](https://github.com/techyaura/nse-bhavcopy)
-
-## Unit Test
-
-npm test
-
-## Issues
-
-Please post your issues for further improvement or fixes if any:
-[Github](https://github.com/techyaura/nse-bhavcopy/issues/new)
+  })
+  .catch(err => {
+    console.log(err);
+  });
